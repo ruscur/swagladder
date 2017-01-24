@@ -4,5 +4,6 @@ version = "0.1.0"
 authors = ["Russell Currey <ruscur@russell.cc>"]
 
 [dependencies]
-iron = "*"
-rustc-serialize = "*"
+iron = "0.5"
+rustc-serialize = "0.3"
+redis = "0.5"
