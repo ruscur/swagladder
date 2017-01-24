@@ -1,0 +1,8 @@
+[package]
+name = "swagladder"
+version = "0.1.0"
+authors = ["Russell Currey <ruscur@russell.cc>"]
+
+[dependencies]
+iron = "*"
+rustc-serialize = "*"
