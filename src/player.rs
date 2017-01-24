@@ -1,6 +1,6 @@
 use elo::Elo;
 
-#[derive(RustcEncodable)]
+#[derive(RustcEncodable, RustcDecodable)]
 pub struct Player {
     name: String,
     rating: f32,
