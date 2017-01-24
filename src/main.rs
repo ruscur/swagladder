@@ -3,6 +3,8 @@ extern crate rustc_serialize;
 extern crate redis;
 #[macro_use]
 extern crate router;
+extern crate handlebars_iron;
+extern crate env_logger;
 
 mod elo;
 mod player;
@@ -14,10 +16,15 @@ use iron::prelude::*;
 use iron::status;
 
 use rustc_serialize::json;
+use rustc_serialize::json::{Json};
 
 use redis::{Commands, RedisError};
 
 use router::{Router};
+
+use handlebars_iron::{HandlebarsEngine, DirectorySource, Template};
+
+use std::collections::BTreeMap;
 
 fn get_players() -> Vec<Player> {
     // Connect to Redis and get a list of players
@@ -56,7 +63,15 @@ fn update_player(player: Player) {
 }
 
 fn main() {
-    //rating_system.win::<Player>(&mut ruscur, &mut njd);
+    env_logger::init().unwrap();
+
+    let mut hbse = HandlebarsEngine::new();
+    hbse.add(Box::new(DirectorySource::new("./templates/", ".hbs")));
+
+    if let Err(e) = hbse.reload() {
+        panic!("{}", e);
+    }
+
     let router = router!(
         root: get "/" => index_handler,
         players: get "/player" => index_handler,
@@ -65,12 +80,18 @@ fn main() {
         result_set: put "/result/:winner/:loser" => result_handler
     );
 
+    let mut chain = Chain::new(router);
+    chain.link_after(hbse);
 
-    Iron::new(router).http("127.0.0.1:42069").unwrap();
+    Iron::new(chain).http("127.0.0.1:42069").unwrap();
 
     fn index_handler(_: &mut Request) -> IronResult<Response> {
-        let players_json = json::encode(&get_players()).unwrap();
-        Ok(Response::with((status::Ok, players_json)))
+        let players = Json::from_str(&json::encode(&get_players()).unwrap()).unwrap();
+        let mut data: BTreeMap<String, Json> = BTreeMap::new();
+        data.insert("players".to_string(), players);
+        let mut resp = Response::new();
+        resp.set_mut(Template::new("index", data)).set_mut(status::Ok);
+        Ok(resp)
     }
 
     fn player_get_handler(req: &mut Request) -> IronResult<Response> {
