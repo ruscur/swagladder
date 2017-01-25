@@ -42,6 +42,19 @@ fn get_players() -> Vec<Player> {
     players
 }
 
+fn get_players_sorted() -> Vec<Player> {
+    let mut count: u64 = 1;
+    let players = get_players();
+    let mut sorted: Vec<Player> = players.clone();
+    sorted.sort();
+    println!("un {:?} sort {:?}", players, sorted);
+    for player in &mut sorted {
+        player.set_rank(count);
+        count += 1;
+    }
+    sorted
+}
+
 fn get_player_by_name(name: &String) -> Option<Player> {
     let client = redis::Client::open("redis://127.0.0.1/").unwrap();
     let con = client.get_connection().unwrap();
@@ -107,7 +120,7 @@ fn main() {
     Iron::new(chain).http("127.0.0.1:42069").unwrap();
 
     fn index_handler(_: &mut Request) -> IronResult<Response> {
-        let players = Json::from_str(&json::encode(&get_players()).unwrap()).unwrap();
+        let players = Json::from_str(&json::encode(&get_players_sorted()).unwrap()).unwrap();
         let results = Json::from_str(&json::encode(&get_results(50)).unwrap()).unwrap();
         let mut data: BTreeMap<String, Json> = BTreeMap::new();
         data.insert("players".to_string(), players);
