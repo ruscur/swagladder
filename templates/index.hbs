@@ -7,9 +7,17 @@
 	<ul>
 	{{#each players}}
 	    <li>
-		<b>{{name}}</b>: {{rating}}
+		<b>{{name}}</b>: rated {{rating}} over {{games}} games ({{wins}}/{{losses}})
 	    </li>
 	{{/each}}
+	</ul>
+	<h1>recent games</h1>
+	<ul>
+	    {{#each results}}
+		<li>
+		    <b>{{winner}}</b> defeated <b>{{loser}}</b> at time <b>{{time}}</b>
+		</li>
+	    {{/each}}
 	</ul>
     </body>
 </html>

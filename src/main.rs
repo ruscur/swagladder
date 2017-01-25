@@ -5,12 +5,16 @@ extern crate redis;
 extern crate router;
 extern crate handlebars_iron;
 extern crate env_logger;
+extern crate time;
 
 mod elo;
 mod player;
+mod gameresult;
+mod utils;
 
 use elo::{Elo, EloRanking};
 use player::Player;
+use gameresult::GameResult;
 
 use iron::prelude::*;
 use iron::status;
@@ -62,6 +66,23 @@ fn update_player(player: Player) {
     let _ : () = con.hset("players", player.get_name(), json::encode(&player).unwrap()).unwrap();
 }
 
+fn add_result(result: GameResult) {
+    let client = redis::Client::open("redis://127.0.0.1/").unwrap();
+    let con = client.get_connection().unwrap();
+    let _ : () = con.lpush("results", json::encode(&result).unwrap()).unwrap();
+}
+
+    fn get_results(count: isize) -> Vec<GameResult> {
+    let client = redis::Client::open("redis://127.0.0.1/").unwrap();
+    let con = client.get_connection().unwrap();
+    let result: Vec<String> = con.lrange("results", 0, count).unwrap();
+    let mut results: Vec<GameResult> = vec!();
+    for enc in result {
+        results.push(json::decode::<GameResult>(&enc).unwrap());
+    }
+    results
+}
+
 fn main() {
     env_logger::init().unwrap();
 
@@ -87,8 +108,10 @@ fn main() {
 
     fn index_handler(_: &mut Request) -> IronResult<Response> {
         let players = Json::from_str(&json::encode(&get_players()).unwrap()).unwrap();
+        let results = Json::from_str(&json::encode(&get_results(50)).unwrap()).unwrap();
         let mut data: BTreeMap<String, Json> = BTreeMap::new();
         data.insert("players".to_string(), players);
+        data.insert("results".to_string(), results);
         let mut resp = Response::new();
         resp.set_mut(Template::new("index", data)).set_mut(status::Ok);
         Ok(resp)
@@ -123,10 +146,12 @@ fn main() {
         }
         let mut winner_player = winner_player.unwrap();
         let mut loser_player = loser_player.unwrap();
+        let result = GameResult::new(winner_player.get_name(), loser_player.get_name());
         let rating_system = EloRanking::new(32);
         rating_system.win::<Player>(&mut winner_player, &mut loser_player);
         update_player(winner_player);
         update_player(loser_player);
+        add_result(result);
         Ok(Response::with((status::NoContent)))
     }
 }
