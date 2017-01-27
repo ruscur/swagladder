@@ -6,11 +6,13 @@ extern crate router;
 extern crate handlebars_iron;
 extern crate env_logger;
 extern crate time;
+extern crate inth_oauth2;
 
 mod elo;
 mod player;
 mod gameresult;
 mod utils;
+mod discord;
 
 use elo::{Elo, EloRanking};
 use player::Player;
@@ -18,6 +20,8 @@ use gameresult::GameResult;
 
 use iron::prelude::*;
 use iron::status;
+use iron::modifiers;
+use iron::Url;
 
 use rustc_serialize::json;
 use rustc_serialize::json::{Json};
@@ -29,6 +33,8 @@ use router::{Router};
 use handlebars_iron::{HandlebarsEngine, DirectorySource, Template};
 
 use std::collections::BTreeMap;
+
+use inth_oauth2::Client;
 
 fn get_players() -> Vec<Player> {
     // Connect to Redis and get a list of players
@@ -85,7 +91,7 @@ fn add_result(result: GameResult) {
     let _ : () = con.lpush("results", json::encode(&result).unwrap()).unwrap();
 }
 
-    fn get_results(count: isize) -> Vec<GameResult> {
+fn get_results(count: isize) -> Vec<GameResult> {
     let client = redis::Client::open("redis://127.0.0.1/").unwrap();
     let con = client.get_connection().unwrap();
     let result: Vec<String> = con.lrange("results", 0, count).unwrap();
@@ -111,13 +117,16 @@ fn main() {
         players: get "/player" => index_handler,
         player_get: get "/player/:name" => player_get_handler,
         player_set: put "/player/:name" => player_set_handler,
-        result_set: put "/result/:winner/:loser" => result_handler
+        result_set: put "/result/:winner/:loser" => result_handler,
+        login: get "/login" => login_handler,
+        discord_auth: get "/oauth20/discord" => discord_handler
     );
 
     let mut chain = Chain::new(router);
     chain.link_after(hbse);
 
     Iron::new(chain).http("127.0.0.1:42069").unwrap();
+
 
     fn index_handler(_: &mut Request) -> IronResult<Response> {
         let players = Json::from_str(&json::encode(&get_players_sorted()).unwrap()).unwrap();
@@ -166,5 +175,16 @@ fn main() {
         update_player(loser_player);
         add_result(result);
         Ok(Response::with((status::NoContent)))
+    }
+
+    fn login_handler(_: &mut Request) -> IronResult<Response> {
+        // TODO do nothing or error if user is already authenticated
+        let client = discord::get_client();
+        let url = Url::from_generic_url(client.auth_uri(Some(discord::DISCORD_SCOPES), None).unwrap()).unwrap();
+        Ok(Response::with((status::Found, modifiers::Redirect(url))))
+    }
+
+    fn discord_handler(req: &mut Request) -> IronResult<Response> {
+        Ok(Response::with((status::Ok)))
     }
 }
