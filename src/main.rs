@@ -14,6 +14,7 @@ extern crate r2d2;
 extern crate r2d2_redis;
 extern crate persistent;
 extern crate iron_sessionstorage;
+extern crate hyper_native_tls;
 
 mod elo;
 mod player;
@@ -256,7 +257,7 @@ fn main() {
             Some(&Value::String(ref code)) => code.clone(),
             _=> return Ok(Response::with((status::BadRequest, "Where's the code bro"))),
         };
-        let http_client = Default::default();
+        let http_client = utils::get_client();
         let token = client.request_token(&http_client, code.trim()).unwrap();
         let resp = http_client.get("https://discordapp.com/api/users/@me")
             .header(Into::<Authorization<_>>::into(&token))
