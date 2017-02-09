@@ -58,24 +58,25 @@ use persistent::{Read as PRead};
 
 use iron_sessionstorage::traits::*;
 use iron_sessionstorage::SessionStorage;
-use iron_sessionstorage::backends::RedisBackend;
+use iron_sessionstorage::backends::SignedCookieBackend;
+use iron_sessionstorage::Value as SessionValue;
 
 #[derive(Copy, Clone)]
 pub struct Redis;
 impl Key for Redis { type Value = Pool<RedisConnectionManager>; }
 
 struct Login {
-    id: String
+    user_json: String
 }
 
 impl iron_sessionstorage::Value for Login {
     fn get_key() -> &'static str { "discord_user" }
-    fn into_raw(self) -> String { self.id }
+    fn into_raw(self) -> String { self.user_json }
     fn from_raw(value: String) -> Option<Self> {
         if value.is_empty() {
             None
         } else {
-            Some(Login { id: value })
+            Some(Login { user_json: value })
         }
     }
 }
@@ -167,9 +168,9 @@ fn main() {
     );
 
     let mut chain = Chain::new(router);
-    chain.link_around(SessionStorage::new(RedisBackend::new("redis://127.0.0.1/").unwrap()));
     chain.link(PRead::<Redis>::both(db_pool));
     chain.link_after(hbse);
+    chain.link_around(SessionStorage::new(SignedCookieBackend::new(b"super secret".to_vec())));
 
     Iron::new(chain).http("127.0.0.1:42069").unwrap();
 
@@ -181,6 +182,9 @@ fn main() {
         let results = Json::from_str(&json::encode(
             &get_results(50, pool.get().unwrap())).unwrap()).unwrap();
         let mut data: BTreeMap<String, Json> = BTreeMap::new();
+        if try!(req.session().get::<Login>()).is_some() {
+            data.insert("user".to_string(), Json::from_str(&req.session().get::<Login>().unwrap().unwrap().into_raw()).unwrap());
+        }
         data.insert("players".to_string(), players);
         data.insert("results".to_string(), results);
         let mut resp = Response::new();
@@ -257,8 +261,7 @@ fn main() {
         let resp = http_client.get("https://discordapp.com/api/users/@me")
             .header(Into::<Authorization<_>>::into(&token))
             .send().unwrap().read_to_string(&mut s).unwrap();
-        let user = json::decode::<discord::DiscordUser>(&s).unwrap();
-        try!(req.session().set(Login { id: user.id }));
+        try!(req.session().set(Login { user_json: s }));
         Ok(Response::with((status::Found, modifiers::Redirect(url_for!(req, "root")))))
     }
 }
