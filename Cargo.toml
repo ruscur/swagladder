@@ -7,11 +7,17 @@ authors = ["Russell Currey <ruscur@russell.cc>"]
 iron = "0.5"
 router = "0.5"
 rustc-serialize = "0.3"
-redis = "0.5"
+# 0.8 is out, but iron-sessionstorage likes 0.7
+redis = { version = "0.7", features = ["with-rustc-json"] }
 handlebars = "0.24"
 handlebars-iron = "0.22"
 env_logger = "0.4"
 time = "0.1"
-# 0.10 is out, but inth-oauth2 likes 0.9
-hyper = "0.9"
-inth-oauth2 = "0.10"
+hyper = "0.10"
+inth-oauth2 = { git = "https://github.com/ruscur/inth-oauth2.git" }
+params = "0.6"
+iron-sessionstorage = { version = "0.6", features = ["redis-backend"] }
+r2d2 = "0.7"
+r2d2_redis = "0.5"
+persistent = "0.3"
+# todo - use persistent to share redis connection pool between handlers
