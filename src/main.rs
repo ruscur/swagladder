@@ -87,7 +87,11 @@ fn get_players(conn: PooledConnection<RedisConnectionManager>)
     let result: Vec<String> = conn.hvals("players").unwrap();
     let mut players: Vec<Player> = vec!();
     for enc in result {
-        players.push(json::decode::<Player>(&enc).unwrap());
+        let player = json::decode::<Player>(&enc).unwrap();
+        if player.get_games() < 10 {
+            continue;
+        }
+        players.push(player);
     }
     players
 }
