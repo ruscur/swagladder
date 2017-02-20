@@ -96,6 +96,21 @@ fn get_players(conn: PooledConnection<RedisConnectionManager>)
     players
 }
 
+fn get_players_in_probation(conn: PooledConnection<RedisConnectionManager>)
+               -> Vec<Player> {
+    let result: Vec<String> = conn.hvals("players").unwrap();
+    let mut players: Vec<Player> = vec!();
+    for enc in result {
+        let player = json::decode::<Player>(&enc).unwrap();
+        if player.get_games() >= 10 {
+            continue;
+        }
+        players.push(player);
+    }
+    players
+}
+
+
 fn get_players_sorted(conn: PooledConnection<RedisConnectionManager>)
                       -> Vec<Player> {
     let mut count: u64 = 1;
@@ -184,6 +199,8 @@ fn main() {
         let pool = req.get::<PRead<Redis>>().unwrap();
         let players = Json::from_str(&json::encode(
             &get_players_sorted(pool.get().unwrap())).unwrap()).unwrap();
+        let probation = Json::from_str(&json::encode(
+            &get_players_in_probation(pool.get().unwrap())).unwrap()).unwrap();
         let results = Json::from_str(&json::encode(
             &get_results(50, pool.get().unwrap())).unwrap()).unwrap();
         let mut data: BTreeMap<String, Json> = BTreeMap::new();
@@ -192,6 +209,7 @@ fn main() {
         }
         data.insert("players".to_string(), players);
         data.insert("results".to_string(), results);
+        data.insert("probation".to_string(), probation);
         let mut resp = Response::new();
         resp.set_mut(Template::new("index", data)).set_mut(status::Ok);
         Ok(resp)

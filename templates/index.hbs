@@ -87,8 +87,8 @@
 		    {{#each players}}
 			<tr>
 			    <td>{{rank}}</td>
-			    <td>{{name}}</td>
-			    <td>{{rating}}</td>
+			    <td><script>document.write(decodeURI('{{name}}'));</script></td>
+			    <td><script>document.write(Math.round({{rating}}));</script></td>
 			    <td>{{games}}</td>
 			    <td>{{wins}}</td>
 			    <td>{{losses}}</td>
@@ -97,6 +97,31 @@
 		</tbody>
 	    </table>
 	</div>
+	<div class="panel panel-default">
+	    <!-- Default panel contents -->
+	    <div class="panel-heading">players in probation (under 10 games)</div>
+
+	    <!-- Table -->
+	    <table class="table table-hover">
+		<thead>
+		    <th>Player</th>
+		    <th>Games played</th>
+		    <th>Wins</th>
+		    <th>Losses</th>
+		</thead>
+		<tbody>
+		    {{#each probation}}
+			<tr>
+			    <td><script>document.write(decodeURI('{{name}}'));</script></td>
+			    <td>{{games}}</td>
+			    <td>{{wins}}</td>
+			    <td>{{losses}}</td>
+			</tr>
+		    {{/each}}
+		</tbody>
+	    </table>
+	</div>
+
 	<div class="panel panel-default">
 	    <!-- Default panel contents -->
 	    <div class="panel-heading">recent games</div>
