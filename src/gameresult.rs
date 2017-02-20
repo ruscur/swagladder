@@ -36,4 +36,15 @@ impl GameResult {
             ..Default::default()
         }
     }
+
+    pub fn new_with_score(winner: &String, loser: &String, winscore: u64, badscore: u64) -> GameResult {
+        GameResult {
+            time: utils::get_current_time(),
+            winner: winner.clone(),
+            loser: loser.clone(),
+            winner_score: Some(winscore),
+            loser_score: Some(badscore),
+            ..Default::default()
+        }
+    }
 }

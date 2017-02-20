@@ -222,14 +222,23 @@ fn main() {
         let pool = req.get::<PRead<Redis>>().unwrap();
         let ref winner = req.extensions.get::<Router>().unwrap().find("winner").unwrap_or("/");
         let ref loser = req.extensions.get::<Router>().unwrap().find("loser").unwrap_or("/");
+        let ref winscore = req.extensions.get::<Router>().unwrap().find("winscore").unwrap_or("/");
+        let ref badscore = req.extensions.get::<Router>().unwrap().find("badscore").unwrap_or("/");
         let winner_player = get_player_by_name(&winner.to_string(), pool.get().unwrap());
         let loser_player = get_player_by_name(&loser.to_string(), pool.get().unwrap());
+        let winscore = winscore.parse::<u64>();
+        let badscore = badscore.parse::<u64>();
         if winner_player.is_none() || loser_player.is_none() {
             return Ok(Response::with((status::NotFound, "Player not found")));
         }
+        if winscore.is_err() || badscore.is_err() {
+            return Ok(Response::with((status::BadRequest, "Bad scores given")));
+        }
         let mut winner_player = winner_player.unwrap();
         let mut loser_player = loser_player.unwrap();
-        let result = GameResult::new(winner_player.get_name(), loser_player.get_name());
+        let winscore = winscore.unwrap();
+        let badscore = badscore.unwrap();
+        let result = GameResult::new_with_score(winner_player.get_name(), loser_player.get_name(), winscore, badscore);
         let rating_system = EloRanking::new(32);
         rating_system.win::<Player>(&mut winner_player, &mut loser_player);
         update_player(winner_player, pool.get().unwrap());
